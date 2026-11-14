@@ -1,0 +1,1 @@
+iverilog -o sim gates/dmux8way.v gates/dmux4way.v gates/mux8way16.v gates/mux4way16.v gates/or8way.v gates/mux16.v gates/mux.v gates/or_gate.v gates/and_gate.v gates/not_gate.v gates/dmux.v gates/nand_gate.v test/dmux8way_tb.v

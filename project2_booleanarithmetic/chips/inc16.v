@@ -4,3 +4,8 @@ module inc16(
 );
     assign out = a + 16'd1;
 endmodule
+
+/**
+ * 16-bit incrementer:
+ * out = in + 1
+ */

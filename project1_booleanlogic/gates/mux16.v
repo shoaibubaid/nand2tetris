@@ -13,3 +13,9 @@ module mux16(
         end
     endgenerate
 endmodule
+
+/**
+ * 16-bit multiplexor: 
+ * for i = 0, ..., 15:
+ * if (sel = 0) out[i] = a[i], else out[i] = b[i]
+ */

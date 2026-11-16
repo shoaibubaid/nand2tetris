@@ -14,7 +14,7 @@ module pc_tb;
     integer tests;
     integer failures;
 
-    pc uut (
+    pc16 uut (
         .clk(clk),
         .in(in),
         .reset(reset),

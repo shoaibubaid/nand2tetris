@@ -254,7 +254,7 @@ module cpu #(
         .Jalr(Jalr),
         .next_pc(next_pc)
     );
-
+ 
 
     // =====================================================
     // 14. INSTRUCTION VALIDITY

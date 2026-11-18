@@ -34,269 +34,206 @@ module data_memory (
     // Latched request information
     // ------------------------------------------------
 
-    reg        mem_read_q;
-    reg        mem_write_q;
     reg [31:0] address_q;
     reg [31:0] write_data_q;
     reg [2:0]  funct3_q;
-
-    reg [31:0] modified_word;
+    reg        mem_read_q;
+    reg        mem_write_q;
 
     // ------------------------------------------------
     // RAM interface
     // ------------------------------------------------
 
-    wire [31:0] ram_out;
-    wire [31:0] ram_in;
+    wire [31:0] ram_read_data;
+    wire [31:0] ram_write_data;
     wire [11:0] ram_address;
-    wire        ram_load;
+    wire        ram_write_enable;
 
     assign ram_address = address_q[13:2];
-    assign ram_in      = modified_word;
 
-    // RAM writes only during WRITE state
-    assign ram_load = (state == WRITE);
+    assign ram_write_enable = (state == WRITE);
 
-    // Existing structural 16 KB RAM
     main_ram main_ram_inst (
         .clk          (clk),
         .address      (ram_address),
-        .write_data   (ram_in),
-        .write_enable (ram_load),
-        .read_data    (ram_out)
+        .write_data   (ram_write_data),
+        .write_enable (ram_write_enable),
+        .read_data    (ram_read_data)
     );
-
-    // ------------------------------------------------
-    // Handshake
-    // ------------------------------------------------
-
-    assign ready = (state == DONE);
 
     // ------------------------------------------------
     // Load formatting
     // ------------------------------------------------
 
     function [31:0] format_load;
-
-        input [31:0] word_in;
+        input [31:0] word;
         input [1:0]  byte_offset;
-        input [2:0]  load_funct3;
+        input [2:0]  operation;
 
-        reg [31:0] shifted_word;
+        reg [31:0] shifted;
 
         begin
-            shifted_word = word_in >> (byte_offset * 8);
+            shifted = word >> (byte_offset * 8);
 
-            case (load_funct3)
+            case (operation)
 
-                // LB: sign-extend byte
-                3'b000:
-                    format_load = {
-                        {24{shifted_word[7]}},
-                        shifted_word[7:0]
-                    };
+                3'b000: // LB
+                    format_load = {{24{shifted[7]}}, shifted[7:0]};
 
-                // LH: sign-extend halfword
-                3'b001:
-                    format_load = {
-                        {16{shifted_word[15]}},
-                        shifted_word[15:0]
-                    };
+                3'b001: // LH
+                    format_load = {{16{shifted[15]}}, shifted[15:0]};
 
-                // LW: full word
-                3'b010:
-                    format_load = word_in;
+                3'b010: // LW
+                    format_load = shifted;
 
-                // LBU: zero-extend byte
-                3'b100:
-                    format_load = {
-                        24'b0,
-                        shifted_word[7:0]
-                    };
+                3'b100: // LBU
+                    format_load = {24'b0, shifted[7:0]};
 
-                // LHU: zero-extend halfword
-                3'b101:
-                    format_load = {
-                        16'b0,
-                        shifted_word[15:0]
-                    };
+                3'b101: // LHU
+                    format_load = {16'b0, shifted[15:0]};
 
                 default:
                     format_load = 32'b0;
 
             endcase
         end
-
     endfunction
 
     // ------------------------------------------------
-    // Store formatting: read-modify-write
+    // Store formatting
     // ------------------------------------------------
 
     function [31:0] merge_store;
-
         input [31:0] old_word;
         input [31:0] new_data;
         input [1:0]  byte_offset;
-        input [2:0]  store_funct3;
+        input [2:0]  operation;
 
         reg [31:0] mask;
         reg [31:0] shifted_data;
 
         begin
 
-            case (store_funct3)
+            case (operation)
 
-                // SB: modify one byte
-                3'b000: begin
-
-                    mask = 32'h000000FF
-                           << (byte_offset * 8);
-
-                    shifted_data = (new_data & 32'h000000FF)
-                                   << (byte_offset * 8);
-
+                3'b000: begin // SB
+                    mask = 32'h000000FF << (byte_offset * 8);
+                    shifted_data = new_data << (byte_offset * 8);
                 end
 
-                // SH: modify two bytes
-                3'b001: begin
-
-                    mask = 32'h0000FFFF
-                           << (byte_offset * 8);
-
-                    shifted_data = (new_data & 32'h0000FFFF)
-                                   << (byte_offset * 8);
-
+                3'b001: begin // SH
+                    mask = 32'h0000FFFF << (byte_offset * 8);
+                    shifted_data = new_data << (byte_offset * 8);
                 end
 
-                // SW: replace complete word
-                3'b010: begin
-
+                3'b010: begin // SW
                     mask = 32'hFFFFFFFF;
                     shifted_data = new_data;
-
                 end
 
                 default: begin
-
                     mask = 32'b0;
                     shifted_data = 32'b0;
-
                 end
 
             endcase
 
-            merge_store = (old_word & ~mask)
-                          | (shifted_data & mask);
-
+            merge_store = (old_word & ~mask) |
+                          (shifted_data & mask);
         end
-
     endfunction
+
+    // Select the value written into RAM.
+    // For SB/SH, this combines the old word with the new data.
+    // For SW, it simply writes the complete new word.
+
+    assign ram_write_data =
+        (funct3_q == 3'b010) ? write_data_q :
+        merge_store(
+            ram_read_data,
+            write_data_q,
+            address_q[1:0],
+            funct3_q
+        );
 
     // ------------------------------------------------
     // Request validation
     // ------------------------------------------------
 
-    function request_valid;
-
+    function valid_request;
         input        is_read;
         input        is_write;
         input [31:0] addr;
         input [2:0]  operation;
 
         begin
+            valid_request = 1'b0;
 
-            request_valid = 1'b1;
+            // Exactly one of read/write must be asserted.
+            if (is_read ^ is_write) begin
 
-            // Exactly one operation must be requested
-            if (is_read == is_write)
-                request_valid = 1'b0;
+                // 16 KB address range: 0x00000000 - 0x00003FFF
+                if (addr[31:14] == 18'b0) begin
 
-            // 16 KB address range:
-            // 0x00000000 - 0x00003FFF
-            if (addr[31:14] != 18'b0)
-                request_valid = 1'b0;
+                    if (is_read) begin
+                        case (operation)
 
-            if (is_read) begin
+                            3'b000, 3'b100: // LB, LBU
+                                valid_request = 1'b1;
 
-                case (operation)
+                            3'b001, 3'b101: // LH, LHU
+                                valid_request = (addr[0] == 1'b0);
 
-                    // LB
-                    // LBU
-                    3'b000,
-                    3'b100: ;
+                            3'b010: // LW
+                                valid_request = (addr[1:0] == 2'b00);
 
-                    // LH, LHU: halfword alignment
-                    3'b001,
-                    3'b101: begin
-                        if (addr[0] != 1'b0)
-                            request_valid = 1'b0;
+                            default:
+                                valid_request = 1'b0;
+
+                        endcase
                     end
 
-                    // LW: word alignment
-                    3'b010: begin
-                        if (addr[1:0] != 2'b00)
-                            request_valid = 1'b0;
+                    else begin
+                        case (operation)
+
+                            3'b000: // SB
+                                valid_request = 1'b1;
+
+                            3'b001: // SH
+                                valid_request = (addr[0] == 1'b0);
+
+                            3'b010: // SW
+                                valid_request = (addr[1:0] == 2'b00);
+
+                            default:
+                                valid_request = 1'b0;
+
+                        endcase
                     end
-
-                    default:
-                        request_valid = 1'b0;
-
-                endcase
-
+                end
             end
-            else if (is_write) begin
-
-                case (operation)
-
-                    // SB
-                    3'b000: ;
-
-                    // SH: halfword alignment
-                    3'b001: begin
-                        if (addr[0] != 1'b0)
-                            request_valid = 1'b0;
-                    end
-
-                    // SW: word alignment
-                    3'b010: begin
-                        if (addr[1:0] != 2'b00)
-                            request_valid = 1'b0;
-                    end
-
-                    default:
-                        request_valid = 1'b0;
-
-                endcase
-
-            end
-
         end
-
     endfunction
 
     // ------------------------------------------------
-    // Memory controller FSM
+    // FSM
     // ------------------------------------------------
 
-    always @(posedge clk) begin
+    assign ready = (state == DONE);
+
+    always @(posedge clk or posedge reset) begin
 
         if (reset) begin
+            state        <= IDLE;
 
-            state         <= IDLE;
+            address_q    <= 32'b0;
+            write_data_q <= 32'b0;
+            funct3_q     <= 3'b0;
+            mem_read_q   <= 1'b0;
+            mem_write_q  <= 1'b0;
 
-            mem_read_q    <= 1'b0;
-            mem_write_q   <= 1'b0;
-
-            address_q     <= 32'b0;
-            write_data_q  <= 32'b0;
-            funct3_q      <= 3'b0;
-
-            modified_word <= 32'b0;
-            read_data     <= 32'b0;
-
-            access_error  <= 1'b0;
-
+            read_data    <= 32'b0;
+            access_error <= 1'b0;
         end
 
         else begin
@@ -304,16 +241,16 @@ module data_memory (
             case (state)
 
                 // ------------------------------------
-                // IDLE: accept a new request
+                IDLE: begin
                 // ------------------------------------
 
-                IDLE: begin
+                    if (!req) begin
+                        access_error <= 1'b0;
+                    end
 
-                    access_error <= 1'b0;
+                    else begin
 
-                    if (req) begin
-
-                        if (!request_valid(
+                        if (!valid_request(
                             mem_read,
                             mem_write,
                             address,
@@ -327,43 +264,34 @@ module data_memory (
 
                         else begin
 
-                            mem_read_q   <= mem_read;
-                            mem_write_q  <= mem_write;
-
                             address_q    <= address;
                             write_data_q <= write_data;
                             funct3_q     <= funct3;
+                            mem_read_q   <= mem_read;
+                            mem_write_q  <= mem_write;
 
-                            // SW does not require a read
-                            if (mem_write && funct3 == 3'b010) begin
+                            access_error <= 1'b0;
 
-                                modified_word <= write_data;
-                                state <= WRITE;
-
-                            end
-                            else begin
-
+                            if (mem_read)
                                 state <= READ;
 
-                            end
+                            else if (funct3 == 3'b010)
+                                state <= WRITE; // SW
 
+                            else
+                                state <= READ;  // SB/SH
                         end
-
                     end
-
                 end
 
                 // ------------------------------------
-                // READ: access existing RAM word
-                // ------------------------------------
-
                 READ: begin
+                // ------------------------------------
 
                     if (mem_read_q) begin
 
-                        // Load operation
                         read_data <= format_load(
-                            ram_out,
+                            ram_read_data,
                             address_q[1:0],
                             funct3_q
                         );
@@ -374,55 +302,40 @@ module data_memory (
 
                     else begin
 
-                        // SB / SH:
-                        // Read old word and merge new data
-                        modified_word <= merge_store(
-                            ram_out,
-                            write_data_q,
-                            address_q[1:0],
-                            funct3_q
-                        );
-
+                        // SB/SH: old RAM word is available.
+                        // Next state writes the merged word.
                         state <= WRITE;
 
                     end
-
                 end
 
                 // ------------------------------------
-                // WRITE: write complete 32-bit word
+                WRITE: begin
                 // ------------------------------------
 
-                WRITE: begin
-
-                    // ram_load is HIGH during this state.
-                    // The RAM writes at this clock edge.
+                    // RAM writes at this clock edge because
+                    // ram_write_enable is asserted in WRITE.
 
                     state <= DONE;
 
                 end
 
                 // ------------------------------------
-                // DONE: wait for request deassertion
+                DONE: begin
                 // ------------------------------------
 
-                DONE: begin
-
+                    // Keep ready asserted until CPU releases req.
                     if (!req)
                         state <= IDLE;
 
                 end
 
                 default: begin
-
                     state <= IDLE;
-
                 end
 
             endcase
-
         end
-
     end
 
 endmodule

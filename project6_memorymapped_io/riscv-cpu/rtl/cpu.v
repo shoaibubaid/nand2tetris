@@ -1,3 +1,4 @@
+
 module cpu #(
     parameter IMEM_ADDR_WIDTH = 10,
     parameter IMEM_INIT_FILE = "",
@@ -14,7 +15,28 @@ module cpu #(
 );
 
     // =====================================================
-    // 1. PROGRAM COUNTER
+    // 1. CPU CONTROL FSM
+    // =====================================================
+
+    localparam CPU_RUN         = 2'b00;
+    localparam CPU_MEM_WAIT    = 2'b01;
+    localparam CPU_MEM_RELEASE = 2'b10;
+
+    reg [1:0] cpu_state;
+
+    wire memory_operation;
+    wire branch_operation;
+    wire alu_operation_valid;
+    wire base_valid;
+
+    wire memory_req;
+    wire memory_ready;
+    wire memory_error;
+
+    wire reg_write_enable;
+
+    // =====================================================
+    // 2. PROGRAM COUNTER
     // =====================================================
 
     reg [31:0] pc;
@@ -23,15 +45,60 @@ module cpu #(
     assign pc_out = pc;
 
     always @(posedge clk) begin
-        if (reset)
+        if (reset) begin
             pc <= 32'b0;
-        else
-            pc <= next_pc;
+            cpu_state <= CPU_RUN;
+        end
+        else begin
+
+            case (cpu_state)
+
+                CPU_RUN: begin
+
+                    if (memory_operation && base_valid) begin
+                        // Memory instruction:
+                        // Issue request and hold PC.
+                        cpu_state <= CPU_MEM_WAIT;
+                    end
+                    else begin
+                        // Normal instruction.
+                        pc <= next_pc;
+                    end
+
+                end
+
+                CPU_MEM_WAIT: begin
+
+                    if (memory_ready) begin
+                        // Memory operation completed.
+                        // Advance PC and release request.
+                        pc <= next_pc;
+                        cpu_state <= CPU_MEM_RELEASE;
+                    end
+
+                    // Otherwise, hold PC and wait.
+                end
+
+                CPU_MEM_RELEASE: begin
+
+                    // memory_req becomes 0 in this state.
+                    // Give memory controller one cycle to return
+                    // from DONE to IDLE.
+                    cpu_state <= CPU_RUN;
+
+                end
+
+                default: begin
+                    cpu_state <= CPU_RUN;
+                end
+
+            endcase
+        end
     end
 
 
     // =====================================================
-    // 2. INSTRUCTION MEMORY
+    // 3. INSTRUCTION MEMORY
     // =====================================================
 
     wire [31:0] instruction;
@@ -51,7 +118,7 @@ module cpu #(
 
 
     // =====================================================
-    // 3. INSTRUCTION DECODER
+    // 4. INSTRUCTION DECODER
     // =====================================================
 
     wire [6:0] opcode;
@@ -71,7 +138,7 @@ module cpu #(
 
 
     // =====================================================
-    // 4. CONTROL UNIT
+    // 5. CONTROL UNIT
     // =====================================================
 
     wire RegWrite;
@@ -102,7 +169,7 @@ module cpu #(
 
 
     // =====================================================
-    // 5. REGISTER FILE
+    // 6. REGISTER FILE
     // =====================================================
 
     wire [31:0] rs1_data;
@@ -116,14 +183,14 @@ module cpu #(
         .rs2(rs2),
         .rd(rd),
         .write_data(write_back_data),
-        .reg_write(RegWrite && cpu_valid && !reset),
+        .reg_write(reg_write_enable),
         .read_data1(rs1_data),
         .read_data2(rs2_data)
     );
 
 
     // =====================================================
-    // 6. IMMEDIATE GENERATOR
+    // 7. IMMEDIATE GENERATOR
     // =====================================================
 
     wire [31:0] immediate;
@@ -136,7 +203,7 @@ module cpu #(
 
 
     // =====================================================
-    // 7. ALU INPUT MULTIPLEXERS
+    // 8. ALU INPUT MULTIPLEXERS
     // =====================================================
 
     wire [31:0] alu_operand_a;
@@ -150,7 +217,7 @@ module cpu #(
 
 
     // =====================================================
-    // 8. ALU CONTROL
+    // 9. ALU CONTROL
     // =====================================================
 
     wire [3:0] alu_ctrl;
@@ -166,7 +233,7 @@ module cpu #(
 
 
     // =====================================================
-    // 9. ALU
+    // 10. ALU
     // =====================================================
 
     wire [31:0] alu_result;
@@ -177,27 +244,6 @@ module cpu #(
         .alu_control(alu_ctrl),
         .out(alu_result),
         .zero()
-    );
-
-
-    // =====================================================
-    // 10. DATA MEMORY
-    // =====================================================
-
-    wire [31:0] memory_read_data;
-    wire memory_access_valid;
-
-    data_memory #(
-        .MEM_BYTES(DMEM_BYTES)
-    ) dmem (
-        .clk(clk),
-        .address(alu_result),
-        .write_data(rs2_data),
-        .funct3(funct3),
-        .MemRead(MemRead && imem_valid && control_valid && !reset),
-        .MemWrite(MemWrite && imem_valid && control_valid && !reset),
-        .read_data(memory_read_data),
-        .access_valid(memory_access_valid)
     );
 
 
@@ -219,7 +265,44 @@ module cpu #(
 
 
     // =====================================================
-    // 12. WRITE-BACK MULTIPLEXER
+    // 12. DATA MEMORY
+    // =====================================================
+
+    wire [31:0] memory_read_data;
+
+    assign memory_operation = MemRead || MemWrite;
+
+    // A memory request is asserted in RUN and remains
+    // asserted while the CPU waits for completion.
+    assign memory_req =
+        !reset &&
+        (
+            (cpu_state == CPU_RUN &&
+             memory_operation &&
+             base_valid)
+            ||
+            (cpu_state == CPU_MEM_WAIT)
+        );
+
+    data_memory dmem (
+        .clk(clk),
+        .reset(reset),
+
+        .req(memory_req),
+        .mem_read(MemRead),
+        .mem_write(MemWrite),
+        .address(alu_result),
+        .write_data(rs2_data),
+        .funct3(funct3),
+
+        .ready(memory_ready),
+        .read_data(memory_read_data),
+        .access_error(memory_error)
+    );
+
+
+    // =====================================================
+    // 13. WRITE-BACK MULTIPLEXER
     // =====================================================
 
     // ResultSrc:
@@ -230,19 +313,30 @@ module cpu #(
     reg [31:0] write_back_mux;
 
     always @(*) begin
+
         case (ResultSrc)
-            2'b00: write_back_mux = alu_result;
-            2'b01: write_back_mux = memory_read_data;
-            2'b10: write_back_mux = pc + 32'd4;
-            default: write_back_mux = 32'b0;
+
+            2'b00:
+                write_back_mux = alu_result;
+
+            2'b01:
+                write_back_mux = memory_read_data;
+
+            2'b10:
+                write_back_mux = pc + 32'd4;
+
+            default:
+                write_back_mux = 32'b0;
+
         endcase
+
     end
 
     assign write_back_data = write_back_mux;
 
 
     // =====================================================
-    // 13. NEXT PC LOGIC
+    // 14. NEXT PC LOGIC
     // =====================================================
 
     next_pc_logic pc_logic (
@@ -254,29 +348,50 @@ module cpu #(
         .Jalr(Jalr),
         .next_pc(next_pc)
     );
- 
+
 
     // =====================================================
-    // 14. INSTRUCTION VALIDITY
+    // 15. INSTRUCTION VALIDITY AND REGISTER WRITE CONTROL
     // =====================================================
 
-    wire memory_operation;
-    wire branch_operation;
-    wire alu_operation_valid;
-
-    assign memory_operation = MemRead || MemWrite;
     assign branch_operation = Branch;
 
     // Branch comparisons are handled by branch_unit.
-    // Other instructions require a valid ALU control decode.
+    // Other instructions require valid ALU control.
     assign alu_operation_valid =
         branch_operation ? 1'b1 : alu_control_valid;
 
-    assign cpu_valid =
+    // Validity of the instruction itself.
+    // Does not depend on memory completion.
+    assign base_valid =
         imem_valid &&
         control_valid &&
         alu_operation_valid &&
-        (!branch_operation || branch_valid) &&
-        (!memory_operation || memory_access_valid);
+        (!branch_operation || branch_valid);
+
+    // An instruction is complete when:
+    // 1. It is a non-memory instruction in RUN.
+    // 2. It is a memory instruction in WAIT and ready is asserted.
+
+    assign cpu_valid =
+        base_valid &&
+        (
+            (!memory_operation &&
+             cpu_state == CPU_RUN)
+
+            ||
+
+            (memory_operation &&
+             cpu_state == CPU_MEM_WAIT &&
+             memory_ready &&
+             !memory_error)
+        );
+
+    // Register file writes only when an instruction
+    // completes successfully.
+    assign reg_write_enable =
+        RegWrite &&
+        cpu_valid &&
+        !reset;
 
 endmodule

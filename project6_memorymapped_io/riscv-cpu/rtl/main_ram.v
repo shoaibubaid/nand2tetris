@@ -9,7 +9,8 @@ module main_ram (
     output wire [31:0] read_data
 );
 
-    // Existing 16 KB structural RAM
+`ifdef STRUCTURAL_RAM
+
     ram4k_32 ram (
         .clk     (clk),
         .in      (write_data),
@@ -17,5 +18,21 @@ module main_ram (
         .address (address),
         .out     (read_data)
     );
+
+`else
+
+    // Behavioral model: 4096 words = 16 KB
+    reg [31:0] memory [0:4095];
+
+    // Combinational read
+    assign read_data = memory[address];
+
+    // Synchronous write
+    always @(posedge clk) begin
+        if (write_enable)
+            memory[address] <= write_data;
+    end
+
+`endif
 
 endmodule

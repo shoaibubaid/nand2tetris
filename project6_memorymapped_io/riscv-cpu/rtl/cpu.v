@@ -1,4 +1,6 @@
 
+`timescale 1ns/1ps
+
 module cpu #(
     parameter IMEM_ADDR_WIDTH = 10,
     parameter IMEM_INIT_FILE = "",
@@ -34,6 +36,7 @@ module cpu #(
     wire memory_error;
 
     wire reg_write_enable;
+
 
     // =====================================================
     // 2. PROGRAM COUNTER
@@ -265,7 +268,7 @@ module cpu #(
 
 
     // =====================================================
-    // 12. DATA MEMORY
+    // 12. MEMORY SUBSYSTEM
     // =====================================================
 
     wire [31:0] memory_read_data;
@@ -284,7 +287,9 @@ module cpu #(
             (cpu_state == CPU_MEM_WAIT)
         );
 
-    data_memory dmem (
+    // Unified memory subsystem:
+    // RAM + Framebuffer + Keyboard + Timer.
+    memory_subsystem dmem (
         .clk(clk),
         .reset(reset),
 

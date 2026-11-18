@@ -1,22 +1,22 @@
 
-#!/bin/bash
+# #!/bin/bash
 
-set -e
+# set -e
 
-echo "Compiling RV32I CPU..."
+# echo "Compiling RV32I CPU..."
 
-iverilog -g2012 -Wall -s rectangle_tb -o rectangle_sim \
-    chips/arithmetic/*.v \
-    chips/logic/*.v \
-    chips/memory/*.v \
-    chips/sequential/*.v \
-    rtl/*.v \
-    testbench/rectangle_tb.v
+# iverilog -g2012 -Wall -s rectangle_tb -o rectangle_sim \
+#     chips/arithmetic/*.v \
+#     chips/logic/*.v \
+#     chips/memory/*.v \
+#     chips/sequential/*.v \
+#     rtl/*.v \
+#     testbench/rectangle_tb.v
 
-echo "Compilation successful."
-echo "Running rectangle generator..."
+# echo "Compilation successful."
+# echo "Running rectangle generator..."
 
-vvp rectangle_sim
+# vvp rectangle_sim
 
 
 # iverilog -g2012 -Wall -s data_memory_tb -o data_memory_sim \
@@ -48,3 +48,77 @@ vvp rectangle_sim
 
 
 # vvp cpu_memory_full_sim
+
+
+
+# iverilog -g2012 -Wall -s address_decoder_tb -o address_decoder_sim \
+#                      rtl/address_decoder.v \
+#                      testbench/address_decoder_tb.v
+
+# vvp address_decoder_sim
+
+
+
+# iverilog -g2012 -o memory_subsystem_test \
+#     testbench/memory_subsystem_tb.v \
+#     rtl/memory_subsystem.v \
+#     rtl/address_decoder.v \
+#     rtl/data_memory.v \
+#     rtl/main_ram.v
+
+# vvp memory_subsystem_test
+
+
+
+
+# iverilog -g2012 -o framebuffer_test \
+#     testbench/framebuffer_tb.v \
+#     rtl/framebuffer.v
+
+# vvp framebuffer_test
+
+
+
+# iverilog -g2012 -o memory_subsystem_test \
+#     testbench/memory_subsystem_tb.v \
+#     rtl/memory_subsystem.v \
+#     rtl/address_decoder.v \
+#     rtl/data_memory.v \
+#     rtl/framebuffer.v \
+#     rtl/main_ram.v
+
+# vvp memory_subsystem_test
+
+
+
+iverilog -g2012 -o cpu_framebuffer_test \
+    testbench/cpu_framebuffer_tb.v \
+    ../../project1_booleanlogic/gates/mux.v \
+    ../../project1_booleanlogic/gates/and_gate.v \
+    ../../project1_booleanlogic/gates/not_gate.v \
+    ../../project1_booleanlogic/gates/nand_gate.v \
+    ../../project1_booleanlogic/gates/or_gate.v \
+    ../../project3_memory/chips/dff.v \
+    ../../project3_memory/chips/register.v \
+    rtl/cpu.v \
+    rtl/instruction_memory.v \
+    rtl/instruction_decoder.v \
+    rtl/control_unit.v \
+    rtl/register_file.v \
+    rtl/immediate_generator.v \
+    rtl/alu_control.v \
+    rtl/branch_unit.v \
+    rtl/data_memory.v \
+    rtl/memory_subsystem.v \
+    rtl/address_decoder.v \
+    rtl/framebuffer.v \
+    rtl/main_ram.v \
+    rtl/next_pc_logic.v \
+    chips/arithmetic/add32.v \
+    chips/arithmetic/alu32.v \
+    chips/arithmetic/inc32.v \
+    chips/logic/mux32.v \
+    chips/sequential/pc32.v \
+    chips/sequential/register32.v
+
+vvp cpu_framebuffer_test

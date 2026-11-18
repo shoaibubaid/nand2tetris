@@ -27,7 +27,7 @@ Starting here
 ### Phase 2 — Peripheral architecture
 1. Implement memory-mapped I/O and address decoding.
 2. Design the framebuffer and pixel addressing scheme.
-3. Implement the video controller.
+3. Implement the video controller.  
 4. Implement keyboard input.
 5. Implement the timer.
 

@@ -12,10 +12,13 @@ module framebuffer (
     input wire [16:0] offset,
     input wire [31:0] write_data,
     input wire [2:0] funct3,
+    input wire [16:0] video_pixel_address,
 
     output wire ready,
     output reg [31:0] read_data,
-    output reg access_error
+    output reg access_error,
+    output reg [7:0] video_pixel_data
+
 );
 
     // 320 * 240 pixels, 1 byte per pixel.
@@ -208,6 +211,32 @@ module framebuffer (
                 end
 
             endcase
+        end
+    end
+
+    // Independent video read port.
+    // One-cycle synchronous read latency.
+    always @(posedge clk) begin
+        if (reset) begin
+            video_pixel_data <= 8'd0;
+        end
+        else if (video_pixel_address < 17'd76800) begin
+            case (video_pixel_address[1:0])
+                2'b00:
+                    video_pixel_data <= memory[video_pixel_address[16:2]][7:0];
+
+                2'b01:
+                    video_pixel_data <= memory[video_pixel_address[16:2]][15:8];
+
+                2'b10:
+                    video_pixel_data <= memory[video_pixel_address[16:2]][23:16];
+
+                2'b11:
+                    video_pixel_data <= memory[video_pixel_address[16:2]][31:24];
+            endcase
+        end
+        else begin
+            video_pixel_data <= 8'd0;
         end
     end
 

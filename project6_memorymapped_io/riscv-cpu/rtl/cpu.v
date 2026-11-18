@@ -9,6 +9,13 @@ module cpu #(
     input wire clk,
     input wire reset,
 
+    // Processing System keyboard interface
+    input wire ps_clk,
+    input wire ps_reset,
+    input wire ps_event_valid,
+    output wire ps_event_ready,
+    input wire [8:0] ps_event_data,
+
     // Debug outputs
     output wire [31:0] pc_out,
     output wire [31:0] instruction_out,
@@ -292,6 +299,12 @@ module cpu #(
     memory_subsystem dmem (
         .clk(clk),
         .reset(reset),
+
+        .ps_clk(ps_clk),
+        .ps_reset(ps_reset),
+        .ps_event_valid(ps_event_valid),
+        .ps_event_ready(ps_event_ready),
+        .ps_event_data(ps_event_data),
 
         .req(memory_req),
         .mem_read(MemRead),

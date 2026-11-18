@@ -1,29 +1,96 @@
 
+
 # =================================
 # MAIN
 # =================================
 
-    lui  sp, 4
+    lui sp, 4
 
-    # x = 10
-    addi a0, zero, 10
+    # Configure timer
+    lui t0, 0x20000
+    addi t0, t0, 16
 
-    # y = 20
-    addi a1, zero, 20
+    # Prescaler = 100000 cycles per millisecond
+    lui t1, 0x18
+    addi t1, t1, 1696
+    sw t1, 8(t0)
 
-    # width = 5
-    addi a2, zero, 5
+    # Reset and enable timer
+    addi t1, zero, 3
+    sw t1, 4(t0)
 
-    # height = 3
-    addi a3, zero, 3
+    # Initial square position
+    addi s0, zero, 10      # x
+    addi s1, zero, 50      # y
 
-    # color = 0x5A
+    # Draw initial square
+    add a0, s0, zero
+    add a1, s1, zero
+    addi a2, zero, 10      # width
+    addi a3, zero, 10      # height
+    addi a4, zero, 90      # color
+
+    jal ra, draw_rectangle
+
+movement_loop:
+
+    # Record current timer value
+    jal ra, timer_read_ms
+    add s2, a0, zero
+
+wait_for_tick:
+
+    jal ra, timer_read_ms
+
+    # Wait until timer changes
+    beq a0, s2, wait_for_tick
+
+    # Erase previous square using black
+    add a0, s0, zero
+    add a1, s1, zero
+    addi a2, zero, 10
+    addi a3, zero, 10
+    addi a4, zero, 0
+
+    jal ra, draw_rectangle
+
+    # Move square one pixel right
+    addi s0, s0, 1
+
+    # Restart from left when reaching boundary
+    addi t0, zero, 300
+    blt s0, t0, draw_new_square
+
+    addi s0, zero, 10
+
+draw_new_square:
+
+    # Draw new square
+    add a0, s0, zero
+    add a1, s1, zero
+    addi a2, zero, 10
+    addi a3, zero, 10
     addi a4, zero, 90
 
-    jal  ra, draw_rectangle
+    jal ra, draw_rectangle
 
-done:
-    jal  zero, done
+    jal zero, movement_loop
+
+
+# =================================
+# timer_read_ms()
+# Returns elapsed time in a0
+# =================================
+
+timer_read_ms:
+
+    lui t0, 0x20000
+    addi t0, t0, 16
+
+    lw a0, 0(t0)
+
+    jalr zero, 0(ra)
+
 
 
 # =================================

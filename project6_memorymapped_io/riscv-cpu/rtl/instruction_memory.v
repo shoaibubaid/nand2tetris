@@ -3,7 +3,7 @@
 
 module instruction_memory #(
     parameter ADDR_WIDTH = 10,
-    parameter INIT_FILE = ""
+    parameter INIT_FILE = "../software/assembler/pong.hex"
 )(
     input wire [31:0] address,
     output reg [31:0] instruction,

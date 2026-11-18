@@ -511,6 +511,59 @@ module cpu_function_tb;
 
 
 
+
+    task dump_framebuffer;
+        integer fd;
+        integer x, y;
+        integer pixel_offset;
+        integer word_index;
+        integer byte_lane;
+        reg [31:0] word_data;
+        reg [7:0] pixel;
+
+        reg [7:0] red;
+        reg [7:0] green;
+        reg [7:0] blue;
+
+        begin
+            fd = $fopen("framebuffer.ppm", "wb");
+
+            if (fd == 0) begin
+                $display("ERROR: Could not open framebuffer.ppm");
+            end
+            else begin
+                // PPM binary image header
+                $fwrite(fd, "P6\n320 240\n255\n");
+
+                for (y = 0; y < 240; y = y + 1) begin
+                    for (x = 0; x < 320; x = x + 1) begin
+
+                        pixel_offset = y * 320 + x;
+                        word_index = pixel_offset / 4;
+                        byte_lane = pixel_offset % 4;
+
+                        word_data =
+                            dut.dmem.framebuffer_controller.memory[word_index];
+
+                        pixel = word_data[byte_lane * 8 +: 8];
+
+                        // RGB332 to RGB888
+                        red   = {pixel[7:5], pixel[7:5], pixel[7:6]};
+                        green = {pixel[4:2], pixel[4:2], pixel[4:3]};
+                        blue  = {pixel[1:0], pixel[1:0],
+                                pixel[1:0], pixel[1:0]};
+
+                        $fwrite(fd, "%c%c%c", red, green, blue);
+                    end
+                end
+
+                $fclose(fd);
+
+                $display("Framebuffer exported: framebuffer.ppm");
+            end
+        end
+    endtask
+
     initial begin
         $dumpfile("timer_demo.vcd");
         $dumpvars(0, cpu_function_tb);
@@ -555,8 +608,11 @@ module cpu_function_tb;
             $fatal;
         end
 
+
         $display("\nTIMER TEST PASSED!");
         $display("========================================");
+
+        dump_framebuffer();
 
         $finish;
     end

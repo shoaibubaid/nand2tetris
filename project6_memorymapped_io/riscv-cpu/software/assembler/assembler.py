@@ -148,8 +148,14 @@ if __name__ == "__main__":
     # input_file = "read_key_demo.asm"
     # output_file = "program.hex"
 
-    input_file = "timer_demo.asm"
-    output_file = "program.hex"
+    # input_file = "timer_demo.asm"
+    # output_file = "program.hex"
+
+    # input_file = "keyboard_square.asm"
+    # output_file = "program.hex"
+
+    input_file = "pong.asm"
+    output_file = "pong.hex"
 
     result = assemble(input_file)
 

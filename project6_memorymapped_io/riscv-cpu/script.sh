@@ -165,8 +165,82 @@
 
 
 
-iverilog -g2012 -s cpu_function_tb -o cpu_function_test \
-    testbench/cpu_function_tb.v \
+# iverilog -g2012 -s cpu_drawrectangle_tb -o cpu_drawrectangle_test \
+#     testbench/cpu_drawrectangle_tb.v \
+#     ../../project1_booleanlogic/gates/mux.v \
+#     ../../project1_booleanlogic/gates/and_gate.v \
+#     ../../project1_booleanlogic/gates/not_gate.v \
+#     ../../project1_booleanlogic/gates/nand_gate.v \
+#     ../../project1_booleanlogic/gates/or_gate.v \
+#     ../../project3_memory/chips/dff.v \
+#     ../../project3_memory/chips/register.v \
+#     rtl/cpu.v \
+#     rtl/instruction_memory.v \
+#     rtl/instruction_decoder.v \
+#     rtl/control_unit.v \
+#     rtl/register_file.v \
+#     rtl/immediate_generator.v \
+#     rtl/alu_control.v \
+#     rtl/branch_unit.v \
+#     rtl/data_memory.v \
+#     rtl/memory_subsystem.v \
+#     rtl/address_decoder.v \
+#     rtl/framebuffer.v \
+#     rtl/main_ram.v \
+#     rtl/peripherals/keyboard_fifo.v \
+#     rtl/peripherals/usb_keyboard_bridge.v \
+#     rtl/peripherals/keyboard_controller.v \
+#     rtl/peripherals/timer.v \
+#     rtl/next_pc_logic.v \
+#     chips/arithmetic/add32.v \
+#     chips/arithmetic/alu32.v \
+#     chips/arithmetic/inc32.v \
+#     chips/logic/mux32.v \
+#     chips/sequential/pc32.v \
+#     chips/sequential/register32.v
+
+# vvp cpu_drawrectangle_test
+
+
+# iverilog -g2012 -s cpu_pong_tb -o cpu_pong_test \
+#     testbench/cpu_pong_tb.v \
+#     ../../project1_booleanlogic/gates/mux.v \
+#     ../../project1_booleanlogic/gates/and_gate.v \
+#     ../../project1_booleanlogic/gates/not_gate.v \
+#     ../../project1_booleanlogic/gates/nand_gate.v \
+#     ../../project1_booleanlogic/gates/or_gate.v \
+#     ../../project3_memory/chips/dff.v \
+#     ../../project3_memory/chips/register.v \
+#     rtl/cpu.v \
+#     rtl/instruction_memory.v \
+#     rtl/instruction_decoder.v \
+#     rtl/control_unit.v \
+#     rtl/register_file.v \
+#     rtl/immediate_generator.v \
+#     rtl/alu_control.v \
+#     rtl/branch_unit.v \
+#     rtl/data_memory.v \
+#     rtl/memory_subsystem.v \
+#     rtl/address_decoder.v \
+#     rtl/framebuffer.v \
+#     rtl/main_ram.v \
+#     rtl/peripherals/keyboard_fifo.v \
+#     rtl/peripherals/usb_keyboard_bridge.v \
+#     rtl/peripherals/keyboard_controller.v \
+#     rtl/peripherals/timer.v \
+#     rtl/next_pc_logic.v \
+#     chips/arithmetic/add32.v \
+#     chips/arithmetic/alu32.v \
+#     chips/arithmetic/inc32.v \
+#     chips/logic/mux32.v \
+#     chips/sequential/pc32.v \
+#     chips/sequential/register32.v
+
+
+
+
+iverilog -g2012 -s cpu_pong_tb -o cpu_pong_test \
+    testbench/cpu_pong_tb.v \
     ../../project1_booleanlogic/gates/mux.v \
     ../../project1_booleanlogic/gates/and_gate.v \
     ../../project1_booleanlogic/gates/not_gate.v \
@@ -198,5 +272,3 @@ iverilog -g2012 -s cpu_function_tb -o cpu_function_test \
     chips/logic/mux32.v \
     chips/sequential/pc32.v \
     chips/sequential/register32.v
-
-# vvp cpu_function_test

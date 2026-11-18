@@ -1,5 +1,5 @@
 $date
-	Wed Nov 18 20:39:59 2026
+	Wed Nov 18 20:46:39 2026
 $end
 $version
 	Icarus Verilog
@@ -453,6 +453,19 @@ $var wire 32 <$ read_data2 [31:0] $end
 $var wire 32 =$ read_data1 [31:0] $end
 $upscope $end
 $upscope $end
+$scope task dump_framebuffer $end
+$var reg 8 >$ blue [7:0] $end
+$var reg 8 ?$ green [7:0] $end
+$var reg 8 @$ pixel [7:0] $end
+$var reg 8 A$ red [7:0] $end
+$var reg 32 B$ word_data [31:0] $end
+$var integer 32 C$ byte_lane [31:0] $end
+$var integer 32 D$ fd [31:0] $end
+$var integer 32 E$ pixel_offset [31:0] $end
+$var integer 32 F$ word_index [31:0] $end
+$var integer 32 G$ x [31:0] $end
+$var integer 32 H$ y [31:0] $end
+$upscope $end
 $upscope $end
 $enddefinitions $end
 $comment Show the parameter values. $end
@@ -532,6 +545,17 @@ b10 Y
 $end
 #0
 $dumpvars
+bx H$
+bx G$
+bx F$
+bx E$
+bx D$
+bx C$
+bx B$
+bx A$
+bx @$
+bx ?$
+bx >$
 bx =$
 bx <$
 bx ;$
@@ -2680,6 +2704,12 @@ b10 #$
 1!
 1(
 #300000
+b11 C$
+b100101011111111 F$
+b10010101111111111 E$
+b101000000 G$
+b11110000 H$
+b10000000000000000000000000000011 D$
 b11011 ,
 0!
 0(

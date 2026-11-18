@@ -16,6 +16,10 @@ module cpu #(
     output wire ps_event_ready,
     input wire [8:0] ps_event_data,
 
+    // Video framebuffer read interface
+    input wire [16:0] video_pixel_address,
+    output wire [7:0] video_pixel_data,
+
     // Debug outputs
     output wire [31:0] pc_out,
     output wire [31:0] instruction_out,
@@ -305,6 +309,9 @@ module cpu #(
         .ps_event_valid(ps_event_valid),
         .ps_event_ready(ps_event_ready),
         .ps_event_data(ps_event_data),
+
+        .video_pixel_address(video_pixel_address),
+        .video_pixel_data(video_pixel_data),
 
         .req(memory_req),
         .mem_read(MemRead),

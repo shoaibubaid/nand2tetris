@@ -18,3 +18,6 @@ set_property -dict { PACKAGE_PIN J19 IOSTANDARD TMDS_33 } [get_ports {hdmi_data_
 # HDMI data lane 2: Red
 set_property -dict { PACKAGE_PIN J18 IOSTANDARD TMDS_33 } [get_ports {hdmi_data_p[2]}]
 set_property -dict { PACKAGE_PIN H18 IOSTANDARD TMDS_33 } [get_ports {hdmi_data_n[2]}]
+
+# BTN0: physical reset button on PYNQ-Z2
+set_property -dict { PACKAGE_PIN D19 IOSTANDARD LVCMOS33 } [get_ports reset]

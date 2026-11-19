@@ -1,0 +1,2 @@
+sudo openFPGALoader pong.bit
+
